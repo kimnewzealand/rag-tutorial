@@ -53,6 +53,7 @@ st.markdown("Ask questions about the IT compliance agreement")
 def load_rag():
     """Load RAG system with caching"""
     rag = SimpleRAG()
+    rag.reload_document("data/documents/sample_document.pdf")
     
     # Create PDF if it doesn't exist
     pdf_path = "data/documents/sample_document.pdf"
@@ -73,7 +74,9 @@ st.success("✅ Ready to search!")
 # Performance metrics sidebar
 with st.sidebar:
     st.header("📊 Performance Metrics")
-    st.write(f"Embedding Model: {rag.embedding_model}")
+    st.write(f"Embedding Model:")
+    st.write(f"{rag.embedding_model}")
+
     # Memory usage
     memory_mb = get_memory_usage()
     st.metric("Memory Usage", f"{memory_mb:.1f} MB")
@@ -86,9 +89,18 @@ with st.sidebar:
     # Refresh button
     if st.button("🔄 Refresh Metrics"):
         st.rerun()
+    
+    # Force reload RAG system (for debugging)
+    if st.button("🔄 Reload RAG System"):
+        st.cache_resource.clear()
+        st.rerun()
+    
 
 # Search interface
 query = st.text_input("Enter your question:", placeholder="Ask about compliance policies...")
+
+# Search options
+num_results = st.slider("Number of results:", 1, 5, 2)
 
 if st.button("🔍 Search", type="primary") and query:
     # Performance tracking
@@ -98,7 +110,10 @@ if st.button("🔍 Search", type="primary") and query:
     with st.spinner("Searching..."):
         # Measure embedding and search time
         search_start = time.time()
-        results = rag.search(query, 1)
+        
+        # Call search with correct number of arguments
+        results = rag.search(query, num_results)
+        
         search_time = time.time() - search_start
         
         # Calculate performance metrics
@@ -108,10 +123,44 @@ if st.button("🔍 Search", type="primary") and query:
         
         # Display results
         st.subheader("📄 Search Results")
-        for i, doc in enumerate(results, 1):
-            st.markdown(f"**Result {i}:**")
-            st.write(doc)
+        
+        # Show best answer first
+        if results and isinstance(results[0], dict) and "answer" in results[0]:
+            best_result = results[0]
+            st.markdown("### 🎯 Best Answer:")
+            st.success(f"**{best_result['answer']}**")
+            st.markdown(f"*Confidence: {best_result['similarity']:.1%}*")
+            if best_result.get("citation"):
+                st.markdown(f"*Source: {best_result['citation']}*")
             st.divider()
+        
+        # Show all results
+        for i, result in enumerate(results, 1):
+            st.markdown(f"**Result {i}:**")
+            
+            # Handle both string and dictionary formats
+            if isinstance(result, dict):
+                # Show similarity score
+                if result.get("similarity") is not None:
+                    st.markdown(f"*Similarity: {result['similarity']:.1%}*")
+                
+                # Show extracted answer if available
+                if result.get("answer"):
+                    st.markdown(f"**Answer:** {result['answer']}")
+                
+                # Show citation
+                # The citation is derived from the 'section' metadata of the document chunk in the vector database.
+                if result.get("citation"):
+                    st.markdown(f"**Source:** {result['citation']}")
+                
+                # Display the full text
+                st.write(result["text"])
+            else:
+                # Old string format (fallback)
+                st.write(result)
+            
+            if i < len(results):  # Don't add divider after last result
+                st.divider()
         
 # Footer
 st.markdown("---")

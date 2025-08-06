@@ -101,16 +101,66 @@ required
 
 ## Performance Characteristics
 
-```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Performance Profile                      │
+│ Performance Profile │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Model: all-MiniLM-L6-v2                                    │
-│  • Embedding Speed:      n/a                                │
-│  • Search Speed:         n/a                                │
-│  • Memory Usage:         507.7 MB                           │
-│  • Storage:              32.5 MB                            │
-│                                                             │
+│ │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Model Comparison │ │
+│ ├─────────────────────────────────────────────────────────┤ │
+│ │ │ │
+│ │ ┌─────────────────────────────────────────────────────┐ │ │
+│ │ │ all-MiniLM-L6-v2 (Current) │ │ │
+│ │ ├─────────────────────────────────────────────────────┤ │ │
+│ │ │ • Memory Usage: 507.7 MB │ │ │
+│ │ │ • Storage: 32.5 MB │ │ │
+│ │ └─────────────────────────────────────────────────────┘ │ │
+│ │ │ │
+│ │ ┌─────────────────────────────────────────────────────┐ │ │
+│ │ │ paraphrase-multilingual-mpnet-base-v2               │ │ │
+│ │ ├─────────────────────────────────────────────────────┤ │ │
+│ │ │ • Memory Usage: 740.8 MB │ │ │
+│ │ │ • Storage: 112.7 MB │ │ │
+│ │ └─────────────────────────────────────────────────────┘ │ │
+│ │ │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│ │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Configuration │ │
+│ ├─────────────────────────────────────────────────────────┤ │
+│ │ │ │
+│ │ • n_results: 10 (configured by default in ChromaDB) │ │
+│ │ • chunk_size: 200 words (configured by default in ChromaDB) │ 
+│ │ • overlap: 50 words (configured by default in ChromaDB) │ │
+│ │ • Distance Metric: Cosine Similarity (configured by default in ChromaDB) │ │
+│ │ │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│ │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Recent Updates │ │
+│ ├─────────────────────────────────────────────────────────┤ │
+│ │ │ │
+│ │ ✅ Updated model that provides improved semantic understanding ||
+│ │ ✅ Added best answer selection │ │
+│ │ ✅ Added transformer with answer extraction with context awareness  │ │
+│ │ ✅ Increased n_results to 10  3 for better context quality(tradeoff : increases memory)│ │
+│ │ │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│ │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Current Sample Queries │ │
+│ ├─────────────────────────────────────────────────────────┤ │
+│ │ │ │
+│ │ Q: "how often must access reviews be performed?" │ │
+│ │ A: "quarterly" │ │
+│ │ │ │
+│ │ Q: "how many levels is Company data classified?" │ │
+│ │ A: "three" │ │
+│ │ │ │
+│ │ Q: "what levels is Company data classified?" │ │
+│ │ A: "Public, Internal, and Confidential" │ │
+│ │ │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│ │
 └─────────────────────────────────────────────────────────────┘
-```
+
