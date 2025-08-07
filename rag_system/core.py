@@ -17,7 +17,11 @@ class SimpleRAG:
             self.embedding_model = embedding_model
             self.pipeline_model = pipeline_model
             self.device = device
-            self.client = chromadb.PersistentClient(path="./data/vector_db")
+            # ChromaDB 0.3.29 uses different API
+            self.client = chromadb.Client(chromadb.config.Settings(
+                chroma_db_impl="duckdb+parquet",
+                persist_directory="./data/vector_db"
+            ))
             self.collection = self.client.get_or_create_collection("documents")
             
             try:

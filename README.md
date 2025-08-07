@@ -70,5 +70,7 @@ rag-tutorial/
 ## 📚 Resources
 
 - [ChromaDB Documentation](https://docs.trychroma.com/)
+- [Hugging Face Transformers](https://huggingface.co/docs/transformers)
 - [Sentence Transformers](https://www.sbert.net/)
+
 

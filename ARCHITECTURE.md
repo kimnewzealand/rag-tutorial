@@ -33,7 +33,7 @@
 ┌─────────────┐    ┌─────────────┐     ┌─────────────┐
 │ Raw Text    │───▶│ Sentence    │───▶│ Vector      │
 │ Documents   │    │ Transformer │     │ Embeddings  │
-│             │    │ (Model)│    │     │             |
+│             │    │ (Model)     │     │             |
 └─────────────┘    └─────────────┘     └─────────────┘
 ```
 
@@ -46,7 +46,7 @@
 ┌─────────────┐    ┌─────────────┐     ┌─────────────┐
 │ Vector      │───▶│ ChromaDB    │───▶│ Persistent  │
 │ Embeddings  │    │ Collection  │     │ Storage     │
-│             │    │             │     │ (./chroma_db)│
+│             │    │             │     │ (./vector_db)│
 └─────────────┘    └─────────────┘     └─────────────┘
 ```
 
@@ -65,7 +65,7 @@
 └─────────────┘    └─────────────┘     └─────────────┘
 ```
 
-The **query embedding** is a vector representation of the user's query, generated on-the-fly by the sentence transformer model. ChromaDB compares this to stored document embeddings using **cosine similarity** to find and return the most relevant document chunks. The query embedding is not saved—it's used only during the search.
+The **query embedding** is a vector representation of the user's query, generated on-the-fly by the sentence transformer model. ChromaDB compares this to stored document embeddings using default **cosine similarity** to find and return the most relevant document chunks. The query embedding is not saved—it's used only during the search.
 
 ChromaDB retrieves the **top-k** most similar document chunks, where *k* is a configurable number (for example, 3). These top-k results represent the document sections that are most relevant to the user's query, ranked by their similarity score.
 
@@ -73,18 +73,20 @@ ChromaDB retrieves the **top-k** most similar document chunks, where *k* is a co
 ## Technology Stack
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Technology Stack                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-│  │ ChromaDB    │  │ Sentence    │  │ Python      │          │
-│  │ Vector DB   │  │ Transformers│  │ 3.8+        │          │
-│  │ (Local)     │  │             │  │             │          │
-│  └─────────────┘  └─────────────┘  └─────────────┘          │
-│                                                             │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                              Technology Stack                                │
+├───────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐           │
+│  │ ChromaDB    │  │ Sentence    │  │ HuggingFace │  │ Streamlit   │           │
+│  │ Vector DB   │  │ Transformers│  │ Transformers│  │ (Web UI)    │           │
+│  │ (Local)     │  │             │  │             │  │             │           │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘           │
+│                          ┌─────────────┐                                      │
+│                          │ Python 3.8+ │                                      │
+│                          └─────────────┘                                      │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Key Features
