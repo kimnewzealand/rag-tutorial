@@ -4,20 +4,17 @@ import sys
 import time
 import psutil
 import gc
-import sqlite3
 
+# Check SQLite version for compatibility
+import sqlite3
 version = sqlite3.sqlite_version
 print(f"📊 SQLite version: {version}")
+
+# ChromaDB 0.3.29 works with older SQLite versions
 if version < "3.35.0":
-    try:
-        import pysqlite3
-    except ImportError:
-        print("❌ pysqlite3-binary not found. Attempting to install pysqlite3-binary automatically...")
-        import subprocess
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pysqlite3-binary"])
-        import pysqlite3
-    sys.modules['sqlite3'] = pysqlite3
-    print("✅ SQLite compatibility fix applied (binary)")
+    print("⚠️ Using ChromaDB 0.3.29 for compatibility with older SQLite")
+else:
+    print("✅ SQLite version is compatible with newer ChromaDB versions")
 
 
 # Add parent directory to path for imports
