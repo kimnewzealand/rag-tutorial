@@ -207,4 +207,4 @@ if st.button("🔍 Search", type="secondary") and query:
         
 # Footer
 st.markdown("---")
-st.markdown("*Powered by ChromaDB and Sentence Transformers*")
+st.markdown('[🐱 GitHub Repo](https://github.com/kimnewzealand/rag-tutorial)')
