@@ -10,7 +10,7 @@ version = sqlite3.sqlite_version
 print(f"📊 SQLite version: {version}")
 if version < "3.35.0":
     os.system("pip install pysqlite3-binary")
-    import pysqlite3_binary
+    import pysqlite3-binary
     sys.modules['sqlite3'] = pysqlite3_binary
     print("✅ SQLite compatibility fix applied (binary)")
 
