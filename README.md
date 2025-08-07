@@ -5,6 +5,8 @@ A Retrieval-Augmented Generation (RAG) system combines information retrieval wit
 
 In this project, the RAG system reads a PDF document, retrieves the most relevant sections based on your query, and presents the answer in a user-friendly web app.
 
+I used the Cursor agent on Auto model select to help build this project.
+
 **Benefits of automating this process include:**
 - **Faster information retrieval:** Instantly find relevant content without manual searching.
 - **Improved accuracy:** Reduces the risk of missing important details in large documents.
@@ -50,9 +52,10 @@ In this project, the RAG system reads a PDF document, retrieves the most relevan
 rag-tutorial/
 ├── rag_system/
 │   ├── core.py                # RAG core logic
+│   ├── utils.py               # RAG utilities
 │   └── web_app.py             # Streamlit web app
 ├── scripts/
-│   └── create_sample_pdf.py   # Script to generate sample PDF
+│   └── create_sample_pdf.py   # Script to generate sample PDF for testing
 ├── data/
 │   └── documents/             # Folder for PDF documents
 ├── requirements.txt           # Python dependencies
@@ -65,5 +68,4 @@ rag-tutorial/
 
 - [ChromaDB Documentation](https://docs.trychroma.com/)
 - [Sentence Transformers](https://www.sbert.net/)
-- [RAG Architecture Guide](https://arxiv.org/abs/2005.11401)
 

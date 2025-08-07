@@ -1,1 +1,4 @@
 .env
+.venv
+data/vector_db
+rag_system/_pycache_

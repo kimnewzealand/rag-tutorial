@@ -9,8 +9,19 @@ from reportlab.lib.units import inch
 def create_sample_pdf():
     """Create a dummy PDF with IT compliance agreement content including LLM usage and timelines"""
     
+    # Define filename
+    filename = "sample_IT_compliance_document.pdf"
+    
+    # Ensure directory exists
+    import os
+    os.makedirs("data/documents", exist_ok=True)
+    
     # Create PDF
-    c = canvas.Canvas("sample_document.pdf", pagesize=letter)
+    try:
+        c = canvas.Canvas(f"data/documents/{filename}", pagesize=letter)
+    except Exception as e:
+        print(f"Error creating PDF: {e}")
+        return
     width, height = letter
     
     # Title
@@ -82,8 +93,8 @@ def create_sample_pdf():
             
             y_position -= 0.3*inch
     
-    c.save(filename="data/documents/sample_document.pdf")
-    print("✅ Created sample_document.pdf")
+    c.save()
+    print(f"✅ Created {filename}")
 
 if __name__ == "__main__":
     create_sample_pdf() 

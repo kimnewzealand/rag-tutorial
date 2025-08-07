@@ -5,100 +5,89 @@ A basic RAG system using ChromaDB and sentence transformers
 
 import chromadb
 from sentence_transformers import SentenceTransformer
-import PyPDF2
-from transformers import pipeline
+from transformers import pipeline,AutoTokenizer
 import torch
+import re
+from .utils import read_pdf, reload_document, reset_database, add_pdf
 
 class SimpleRAG:
-    def __init__(self, embedding_model='paraphrase-multilingual-MiniLM-L12-v2'):
-        self.embedding_model = embedding_model
-        self.client = chromadb.PersistentClient(path="./data/vector_db")
-        self.collection = self.client.get_or_create_collection("documents")
-        self.model = SentenceTransformer(embedding_model)
-        
-        # Initialize transformers QA pipeline
-        try:
-            self.qa_pipeline = pipeline(
-                "question-answering",
-                model="deepset/roberta-base-squad2",
-                tokenizer="deepset/roberta-base-squad2",
-                device=0 if torch.cuda.is_available() else -1
-            )
-            print("✅ QA pipeline loaded successfully")
+    
+    def __init__(self, embedding_model='sentence-transformers/all-MiniLM-L6-v2',pipeline_model='deepset/roberta-base-squad2',device=-1):
+        try: 
+            self.embedding_model = embedding_model
+            self.pipeline_model = pipeline_model
+            self.device = device
+            self.client = chromadb.PersistentClient(path="./data/vector_db")
+            self.collection = self.client.get_or_create_collection("documents")
+            
+            try:
+                self.model = SentenceTransformer(embedding_model)
+                print(f"✅ Embedding model loaded: {embedding_model}")
+            except Exception as e:
+                print(f"❌ Failed to load embedding model '{embedding_model}': {e}")
+                print("💡 Try using a valid model like 'sentence-transformers/all-MiniLM-L6-v2'")
+                raise
+            
+            try:
+                self.qa_pipeline = pipeline(
+                    "question-answering",
+                    model=pipeline_model,
+                    tokenizer=pipeline_model,
+                    device=-1
+                )
+                print(f"✅ QA pipeline loaded: {pipeline_model}")
+            except Exception as e:
+                print(f"❌ Failed to load QA pipeline '{pipeline_model}': {e}")
+                print("💡 Try using a valid model like 'deepset/roberta-base-squad2'")
+                raise
+                
+            print(f"✅ RAG system ready.")
         except Exception as e:
-            print(f"⚠️ QA pipeline not available: {e}")
-            self.qa_pipeline = None
+            print(f"❌ Error initializing RAG system: {e}")
+            raise
+    
+    def chunk_text(self, text, max_chunk_size=200):
+        """Split text into chunks using Transformers tokenizer for better sentence detection"""
         
-        print(f"✅ RAG system ready with {embedding_model}")
-    
-    def reset_database(self):
-        """Clear the database and reinitialize"""
-        try:
-            self.client.delete_collection("documents")
-            print("🗑️ Deleted old collection")
-        except:
-            pass
+        # Use the same tokenizer as the embedding model for consistency
+        tokenizer = AutoTokenizer.from_pretrained(self.embedding_model)
         
-        self.collection = self.client.create_collection("documents")
-        print("🔄 Created new collection")
-    
-    def reload_document(self, pdf_path):
-        """Reload document with proper section metadata"""
-        self.reset_database()
-        self.add_pdf(pdf_path)
-        print("✅ Document reloaded with section metadata")
-    
-    def read_pdf(self, pdf_path):
-        """Read text from PDF file"""
-        with open(pdf_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            return " ".join(page.extract_text() for page in pdf_reader.pages)
-    
-    def chunk_text(self, text, chunk_size=200, overlap=50):
-        """Split text into overlapping chunks"""
-        words = text.split()
+        # Split text into sentences using tokenizer
+        # The tokenizer can help identify sentence boundaries more accurately
+        tokens = tokenizer.tokenize(text)
+        
+        # Reconstruct text from tokens to get proper sentence boundaries
+        reconstructed_text = tokenizer.convert_tokens_to_string(tokens)
+        
+        # Split by sentence endings (., !, ?) but preserve section numbers
+        sentences = re.split(r'([.!?]+)', reconstructed_text)
+        
         chunks = []
-        for i in range(0, len(words), chunk_size - overlap):
-            chunk = " ".join(words[i:i + chunk_size])
-            if len(chunk.strip()) > 50:
-                chunks.append(chunk.strip())
+        current_chunk = ""
+        
+        for i in range(0, len(sentences), 2):
+            sentence = sentences[i]
+            punctuation = sentences[i + 1] if i + 1 < len(sentences) else ""
+            full_sentence = sentence + punctuation
+            
+            # Check if adding this sentence would exceed chunk size
+            if len(current_chunk + full_sentence) <= max_chunk_size:
+                current_chunk += full_sentence + " "
+            else:
+                # Save current chunk if it has content
+                if current_chunk.strip():
+                    chunks.append(current_chunk.strip())
+                # Start new chunk with current sentence
+                current_chunk = full_sentence + " "
+        
+        # Add the last chunk if it has content
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+        
+        # Filter out chunks that are too short
+        chunks = [chunk for chunk in chunks if len(chunk.strip()) > 50]
+        
         return chunks
-    
-    def add_pdf(self, pdf_path):
-        """Add PDF document to the system with section tracking"""
-        text = self.read_pdf(pdf_path)
-        chunks = self.chunk_text(text)
-        
-        # Extract section information for each chunk
-        chunk_metadata = []
-        for i, chunk in enumerate(chunks):
-            section = self._extract_section(chunk)
-            chunk_metadata.append({
-                "section": section,
-                "chunk_id": i
-            })
-        
-        self.collection.add(
-            documents=chunks,
-            ids=[f"doc_{i}" for i in range(len(chunks))],
-            metadatas=chunk_metadata
-        )
-        print(f"✅ Added {len(chunks)} chunks from PDF")
-    
-    def _extract_section(self, text):
-        """Extract section number from text"""
-        import re
-        # Look for section patterns like "1.1", "2.3", etc.
-        section_match = re.search(r'(\d+\.\d+)', text)
-        if section_match:
-            return f"IT Compliance Agreement for using AI Section {section_match.group(1)}"
-        
-        # Look for main section patterns like "1.", "2.", etc.
-        main_section_match = re.search(r'^(\d+)\.', text)
-        if main_section_match:
-            return f"IT Compliance Agreement for using AI Section {main_section_match.group(1)}"
-        
-        return "IT Compliance Agreement for using AI"
     
     def search(self, query, n_results=10):
         """Search for relevant documents and extract answers with citations"""
@@ -110,7 +99,8 @@ class SimpleRAG:
         
         documents = results["documents"][0]
         distances = results["distances"][0]
-        metadatas = results["metadatas"][0] if results["metadatas"] else [{"section": "Unknown Section"} for _ in documents]
+        # Get the metadata for each document result; if not present, assign a default section label
+        metadatas = results["metadatas"][0] if results["metadatas"] else [{"section": ""} for _ in documents]
         
         # Return documents with answer extraction and citations
         search_results = []
@@ -118,14 +108,31 @@ class SimpleRAG:
             # Extract potential answer from document using transformers
             answer = self._extract_answer_with_transformers(query, doc)
             
-            # Get section citation
-            section = metadatas[i].get("section", "Unknown Section") if metadatas[i] else "Unknown Section"
+            # Extract section number and title from the document
+            # Look for pattern like "1." or "1.1"
+            section_match = re.search(r"\b((?:\d+\.)+\d*)\s*(.+)", doc)
+            if section_match:
+                section_num = section_match.group(1).rstrip('.')
+                section_title = section_match.group(2).split('.')[0].strip()  # Take first sentence as title
+                # Try to get document title from metadata if available
+                doc_title = metadatas[i].get("document_title", "") if i < len(metadatas) and isinstance(metadatas[i], dict) else ""
+                if doc_title:
+                    citation = f"{doc_title}.pdf - Section {section_num}. {section_title}"
+                else:
+                    citation = f"Section {section_num}. {section_title}"
+            else:
+                # Try to get document title from metadata if available
+                doc_title = metadatas[i].get("document_title", "") if i < len(metadatas) and isinstance(metadatas[i], dict) else ""
+                if doc_title:
+                    citation = f"{doc_title} - Section not found"
+                else:
+                    citation = "Issues with citation"
             
             search_results.append({
                 "text": doc,
                 "similarity": 1 - distances[i] if distances[i] is not None else 0,
                 "answer": answer,
-                "citation": section
+                "citation": citation
             })
         
         return search_results
@@ -133,53 +140,17 @@ class SimpleRAG:
     def _extract_answer_with_transformers(self, query, document):
         """Extract answer using transformers QA pipeline"""
         if self.qa_pipeline is None:
-            return self._extract_answer_fallback(query, document)
+            raise Exception("QA pipeline is not available")
         
-        try:
-            # Use transformers QA pipeline
-            result = self.qa_pipeline(
-                question=query,
-                context=document,
-                max_answer_len=50,
-                handle_impossible_answer=True
-            )
-            
-            # Return the extracted answer
-            if result['score'] > 0.3:  # Confidence threshold
-                return result['answer']
-            else:
-                return self._extract_answer_fallback(query, document)
-                
-        except Exception as e:
-            print(f"⚠️ Transformers QA failed: {e}")
-            return self._extract_answer_fallback(query, document)
+        # Use transformers QA pipeline
+        result = self.qa_pipeline(
+            question=query,
+            context=document,
+            max_answer_len=50,
+            handle_impossible_answer=True
+        )
+        
+        # Return the extracted answer
+        return result['answer']
+         
     
-    def _extract_answer_fallback(self, query, document):
-        """Fallback answer extraction using regex patterns"""
-        query_lower = query.lower()
-        doc_lower = document.lower()
-        
-        # Handle specific question types
-        if "how many" in query_lower:
-            import re
-            numbers = re.findall(r'\b(?:three|four|five|six|seven|eight|nine|ten|\d+)\b', doc_lower)
-            if numbers:
-                return numbers[0]
-        
-        if "how often" in query_lower or "frequency" in query_lower:
-            frequency_terms = [
-                "quarterly", "monthly", "weekly", "daily", "annually", "yearly",
-                "every quarter", "every month", "every week", "every day", "every year"
-            ]
-            for term in frequency_terms:
-                if term in doc_lower:
-                    return term
-        
-        # Default: return first meaningful sentence
-        sentences = document.split('.')
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if len(sentence) > 10:
-                return sentence
-        
-        return document[:100]

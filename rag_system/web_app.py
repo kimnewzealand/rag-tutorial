@@ -7,8 +7,13 @@ import gc
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add scripts directory to path
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'scripts'))
+
+from create_sample_pdf import create_sample_pdf
 
 from rag_system.core import SimpleRAG
+from rag_system.utils import reload_document
 
 try:
     # Page config
@@ -46,36 +51,74 @@ def format_time(seconds):
 
 # Title
 st.title("📋 Compliance Assistant")
-st.markdown("Ask questions about the IT compliance agreement")
+
+# Custom CSS for blue button and hidden sidebar
+st.markdown("""
+<style>
+.stButton > button {
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: 500;
+}
+.stButton > button:hover {
+    background-color: #0052a3;
+}
+
+/* Hide sidebar by default */
+section[data-testid="stSidebar"] {
+    display: none;
+}
+
+/* Show sidebar when user clicks the hamburger menu */
+section[data-testid="stSidebar"]:has(.stButton) {
+    display: block;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # Initialize RAG system
-@st.cache_resource
+@st.cache_resource(ttl=60)  # Cache for 60 seconds to allow for updates
 def load_rag():
     """Load RAG system with caching"""
     rag = SimpleRAG()
-    rag.reload_document("data/documents/sample_document.pdf")
     
     # Create PDF if it doesn't exist
-    pdf_path = "data/documents/sample_document.pdf"
+    pdf_path = "data/documents/sample_IT_compliance_document.pdf"
     if not os.path.exists(pdf_path):
-        st.info("Creating sample PDF...")
-        from scripts.create_sample_pdf import create_sample_pdf
         create_sample_pdf()
     
-    rag.add_pdf(pdf_path)
+    # Load the document with proper section metadata
+    reload_document(rag, pdf_path)
     return rag
 
 # Load RAG system
-with st.spinner("Loading..."):
-    rag = load_rag()
+rag = load_rag()
 
-st.success("✅ Ready to search!")
+# PDF Content Dropdown
+with st.expander("View sample_IT_compliance_document.pdf contents", expanded=False):
+    # Read PDF content dynamically
+    pdf_path = "data/documents/sample_IT_compliance_document.pdf"
+    if os.path.exists(pdf_path):
+        try:
+            from rag_system.utils import read_pdf
+            pdf_content = read_pdf(pdf_path)
+            st.markdown(pdf_content)
+        except Exception as e:
+            st.error(f"Error reading PDF: {e}")
+            st.info("PDF content could not be loaded. Please check if the file exists.")
+    else:
+        st.warning("PDF file not found. Please ensure the document has been created.")
 
 # Performance metrics sidebar
 with st.sidebar:
-    st.header("📊 Performance Metrics")
-    st.write(f"Embedding Model:")
+    st.header("📊 Metrics")
+    st.header(f"Embedding Model:")
     st.write(f"{rag.embedding_model}")
+    st.header(f"Pipeline Model:")
+    st.write(f"{rag.pipeline_model}")
 
     # Memory usage
     memory_mb = get_memory_usage()
@@ -85,24 +128,23 @@ with st.sidebar:
     # Storage size
     storage_mb = get_storage_size()
     st.metric("Storage Size", f"{storage_mb:.1f} MB")
-    
-    # Refresh button
-    if st.button("🔄 Refresh Metrics"):
-        st.rerun()
+
     
     # Force reload RAG system (for debugging)
-    if st.button("🔄 Reload RAG System"):
+    if st.button("🔄 Reload System"):
         st.cache_resource.clear()
         st.rerun()
     
+    # Clear cache button
+    if st.button("🗑️ Clear Cache"):
+        st.cache_resource.clear()
+        st.success("Cache cleared! Please refresh the page.")
+    
 
 # Search interface
-query = st.text_input("Enter your question:", placeholder="Ask about compliance policies...")
+query = st.text_input("Enter your question:", value="How many levels is Company data classified?", placeholder="Ask about compliance policies...")
 
-# Search options
-num_results = st.slider("Number of results:", 1, 5, 2)
-
-if st.button("🔍 Search", type="primary") and query:
+if st.button("🔍 Search", type="secondary") and query:
     # Performance tracking
     start_time = time.time()
     initial_memory = get_memory_usage()
@@ -111,8 +153,8 @@ if st.button("🔍 Search", type="primary") and query:
         # Measure embedding and search time
         search_start = time.time()
         
-        # Call search with correct number of arguments
-        results = rag.search(query, num_results)
+        # Call search with 5 results
+        results = rag.search(query, 5)
         
         search_time = time.time() - search_start
         
@@ -121,8 +163,6 @@ if st.button("🔍 Search", type="primary") and query:
         final_memory = get_memory_usage()
         memory_delta = final_memory - initial_memory
         
-        # Display results
-        st.subheader("📄 Search Results")
         
         # Show best answer first
         if results and isinstance(results[0], dict) and "answer" in results[0]:
@@ -134,33 +174,24 @@ if st.button("🔍 Search", type="primary") and query:
                 st.markdown(f"*Source: {best_result['citation']}*")
             st.divider()
         
-        # Show all results
+        # Show all results in dropdowns
         for i, result in enumerate(results, 1):
-            st.markdown(f"**Result {i}:**")
-            
-            # Handle both string and dictionary formats
-            if isinstance(result, dict):
-                # Show similarity score
-                if result.get("similarity") is not None:
-                    st.markdown(f"*Similarity: {result['similarity']:.1%}*")
-                
-                # Show extracted answer if available
-                if result.get("answer"):
-                    st.markdown(f"**Answer:** {result['answer']}")
-                
-                # Show citation
-                # The citation is derived from the 'section' metadata of the document chunk in the vector database.
-                if result.get("citation"):
-                    st.markdown(f"**Source:** {result['citation']}")
-                
-                # Display the full text
-                st.write(result["text"])
-            else:
-                # Old string format (fallback)
-                st.write(result)
-            
-            if i < len(results):  # Don't add divider after last result
-                st.divider()
+            with st.expander(f"Result {i} - Similarity: {result.get('similarity', 0):.1%}", expanded=False):
+                # Handle both string and dictionary formats
+                if isinstance(result, dict):
+                    # Show extracted answer if available
+                    if result.get("answer"):
+                        st.markdown(f"**Answer:** {result['answer']}")
+                    
+                    # Show citation
+                    if result.get("citation"):
+                        st.markdown(f"**Source:** {result['citation']}")
+                    
+                    # Display the full text
+                    st.write(result["text"])
+                else:
+                    # Old string format (fallback)
+                    st.write(result)
         
 # Footer
 st.markdown("---")
