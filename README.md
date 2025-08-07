@@ -5,6 +5,9 @@ A Retrieval-Augmented Generation (RAG) system combines information retrieval wit
 
 In this project, the RAG system reads a PDF document, retrieves the most relevant sections based on your query, and presents the answer in a user-friendly web app.
 
+See deployed app version here:
+https://compliance-rag.streamlit.app/
+
 I used the Cursor agent on Auto model select to help build this project.
 
 **Benefits of automating this process include:**
