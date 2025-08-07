@@ -1,4 +1,4 @@
 .env
 .venv
 data/vector_db
-rag_system/_pycache_
+_pycache_
