@@ -12,7 +12,7 @@ from .utils import read_pdf, reload_document, reset_database, add_pdf
 
 class SimpleRAG:
     
-    def __init__(self, embedding_model='sentence-transformers/all-MiniLM-L6-v2',pipeline_model='deepset/roberta-base-squad2',device=-1):
+    def __init__(self, embedding_model='sentence-transformers/paraphrase-multilingual-mpnet-base-v2',pipeline_model='deepset/roberta-base-squad2',device=-1):
         try: 
             self.embedding_model = embedding_model
             self.pipeline_model = pipeline_model
