@@ -9,10 +9,18 @@ import sqlite3
 version = sqlite3.sqlite_version
 print(f"📊 SQLite version: {version}")
 if version < "3.35.0":
-    os.system("pip install pysqlite3-binary")
-    import pysqlite3-binary
-    sys.modules['sqlite3'] = pysqlite3_binary
-    print("✅ SQLite compatibility fix applied (binary)")
+    try:
+        import subprocess
+        try:
+            import pysqlite3
+        except ImportError:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pysqlite3-binary"])
+            import pysqlite3
+        sys.modules['sqlite3'] = pysqlite3
+        print("✅ SQLite compatibility fix applied (binary)")
+    except ImportError:
+        print("❌ pysqlite3-binary not found.")
+        sys.exit(1)
 
 
 # Add parent directory to path for imports
