@@ -4,7 +4,8 @@ import sys
 import time
 import psutil
 import gc
-
+from create_sample_pdf import create_sample_pdf
+from rag_system.core import SimpleRAG
 # Check SQLite version for compatibility
 import sqlite3
 version = sqlite3.sqlite_version
@@ -22,11 +23,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Add scripts directory to path
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'scripts'))
 
-from create_sample_pdf import create_sample_pdf
-
-from rag_system.core import SimpleRAG
-from rag_system.utils import reload_document
-
 try:
     # Page config
     st.set_page_config(page_title="Compliance Assistant", page_icon="", layout="wide")
@@ -37,7 +33,7 @@ except RuntimeError as e:
     else:
         raise
 
-# Performance monitoring functions
+# Performance monitoring utility functions
 def get_memory_usage():
     """Get current memory usage in MB"""
     process = psutil.Process()
@@ -55,59 +51,35 @@ def get_storage_size():
         return total_size / 1024 / 1024
     return 0
 
-def format_time(seconds):
-    """Format time in milliseconds or seconds"""
-    if seconds < 1:
-        return f"{seconds * 1000:.1f}ms"
-    return f"{seconds:.2f}s"
-
 # Title
 st.title("📋 Compliance Assistant")
 
-# Custom CSS for blue button and hidden sidebar
+# Custom CSS for blue button and sidebar behavior
 st.markdown("""
 <style>
 .stButton > button {
     background-color: #0066cc;
     color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 16px;
-    font-weight: 500;
 }
-.stButton > button:hover {
-    background-color: #0052a3;
-}
-
 /* Hide sidebar by default */
 section[data-testid="stSidebar"] {
     display: none;
 }
-
 /* Show sidebar when user clicks the hamburger menu */
-section[data-testid="stSidebar"]:has(.stButton) {
+section[data-testid="stSidebar"][aria-expanded="true"] {
     display: block;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # Initialize RAG system
-@st.cache_resource(ttl=60)  # Cache for 60 seconds to allow for updates
-def load_rag():
-    """Load RAG system with caching"""
-    rag = SimpleRAG()
-    
-    # Create PDF if it doesn't exist
-    pdf_path = "data/documents/sample_IT_compliance_document.pdf"
-    if not os.path.exists(pdf_path):
-        create_sample_pdf()
-    
-    # Load the document with proper section metadata
-    reload_document(rag, pdf_path)
-    return rag
+# Create PDF if it doesn't exist
+pdf_path = "data/documents/sample_IT_compliance_document.pdf"
+if not os.path.exists(pdf_path):
+    create_sample_pdf()
 
 # Load RAG system
-rag = load_rag()
+rag = SimpleRAG()
 
 # PDF Content Dropdown
 with st.expander("View sample_IT_compliance_document.pdf contents", expanded=False):
@@ -146,11 +118,6 @@ with st.sidebar:
     if st.button("🔄 Reload System"):
         st.cache_resource.clear()
         st.rerun()
-    
-    # Clear cache button
-    if st.button("🗑️ Clear Cache"):
-        st.cache_resource.clear()
-        st.success("Cache cleared! Please refresh the page.")
     
 
 # Search interface

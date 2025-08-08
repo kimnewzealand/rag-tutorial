@@ -4,11 +4,9 @@ A basic RAG system using ChromaDB and sentence transformers
 """
 
 import chromadb
-from sentence_transformers import SentenceTransformer
 from transformers import pipeline,AutoTokenizer
-import torch
 import re
-from .utils import read_pdf, reload_document, reset_database, add_pdf
+from .utils import read_pdf, reset_database, add_pdf
 
 class SimpleRAG:
     
@@ -16,21 +14,12 @@ class SimpleRAG:
         try: 
             self.embedding_model = embedding_model
             self.pipeline_model = pipeline_model
-            self.device = device
-            # ChromaDB 0.3.29 uses different API
+            # ChromaDB 0.3.29 uses different API to current version but this config is compatabile with deployed Streamlit
             self.client = chromadb.Client(chromadb.config.Settings(
                 chroma_db_impl="duckdb+parquet",
                 persist_directory="./data/vector_db"
             ))
             self.collection = self.client.get_or_create_collection("documents")
-            
-            try:
-                self.model = SentenceTransformer(embedding_model)
-                print(f"✅ Embedding model loaded: {embedding_model}")
-            except Exception as e:
-                print(f"❌ Failed to load embedding model '{embedding_model}': {e}")
-                print("💡 Try using a valid model like 'sentence-transformers/all-MiniLM-L6-v2'")
-                raise
             
             try:
                 self.qa_pipeline = pipeline(
@@ -51,9 +40,9 @@ class SimpleRAG:
             raise
     
     def chunk_text(self, text, max_chunk_size=200):
-        """Split text into chunks using Transformers tokenizer for better sentence detection"""
+        """Split text into sentence chunks. Currently a custom utility, could be replaced with another library that handles sentence splitting."""
         
-        # Use the same tokenizer as the embedding model for consistency
+        # Use the same embedding model as the document embedding
         tokenizer = AutoTokenizer.from_pretrained(self.embedding_model)
         
         # Split text into sentences using tokenizer
@@ -69,32 +58,25 @@ class SimpleRAG:
         chunks = []
         current_chunk = ""
         
+        chunk = ""
         for i in range(0, len(sentences), 2):
             sentence = sentences[i]
             punctuation = sentences[i + 1] if i + 1 < len(sentences) else ""
             full_sentence = sentence + punctuation
-            
-            # Check if adding this sentence would exceed chunk size
-            if len(current_chunk + full_sentence) <= max_chunk_size:
-                current_chunk += full_sentence + " "
+            if len(chunk + full_sentence) <= max_chunk_size:
+                chunk += full_sentence + " "
             else:
-                # Save current chunk if it has content
-                if current_chunk.strip():
-                    chunks.append(current_chunk.strip())
-                # Start new chunk with current sentence
-                current_chunk = full_sentence + " "
-        
-        # Add the last chunk if it has content
-        if current_chunk.strip():
-            chunks.append(current_chunk.strip())
-        
-        # Filter out chunks that are too short
-        chunks = [chunk for chunk in chunks if len(chunk.strip()) > 50]
-        
+                if chunk.strip():
+                    chunks.append(chunk.strip())
+                chunk = full_sentence + " "
+        if chunk.strip():
+            chunks.append(chunk.strip())
+        chunks = [c for c in chunks if len(c.strip()) > 50]
         return chunks
     
-    def search(self, query, n_results=10):
+    def search(self, query, n_results=5):
         """Search for relevant documents and extract answers with citations"""
+        # Query the ChromaDB collection for the 5 most relevant document chunks to the input query withdistances (similarity scores), and metadata.
         results = self.collection.query(
             query_texts=[query],
             n_results=n_results,
@@ -106,13 +88,13 @@ class SimpleRAG:
         # Get the metadata for each document result; if not present, assign a default section label
         metadatas = results["metadatas"][0] if results["metadatas"] else [{"section": ""} for _ in documents]
         
-        # Return documents with answer extraction and citations
+        # For each retrieved document, extract a specific answer and citation
         search_results = []
         for i, doc in enumerate(documents):
             # Extract potential answer from document using transformers
             answer = self._extract_answer_with_transformers(query, doc)
             
-            # Extract section number and title from the document
+            # Custom extraction section number and title from the document. This could be replaced with a more robust solution
             # Look for pattern like "1." or "1.1"
             section_match = re.search(r"\b((?:\d+\.)+\d*)\s*(.+)", doc)
             if section_match:
@@ -131,7 +113,7 @@ class SimpleRAG:
                     citation = f"{doc_title} - Section not found"
                 else:
                     citation = "Issues with citation"
-            
+            # Assemble the search results
             search_results.append({
                 "text": doc,
                 "similarity": 1 - distances[i] if distances[i] is not None else 0,

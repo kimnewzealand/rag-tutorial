@@ -94,29 +94,3 @@ def add_pdf(rag_instance, pdf_path):
     except Exception as e:
         raise Exception(f"Error adding PDF {pdf_path}: {str(e)}")
 
-
-def reload_document(rag_instance, pdf_path):
-    """
-    Reload document with proper section metadata
-    
-    Args:
-        rag_instance: SimpleRAG instance
-        pdf_path (str): Path to the PDF file
-        
-    Returns:
-        None
-        
-    Raises:
-        Exception: If there's an error reloading the document
-    """
-    try:
-        # Reset the database
-        reset_database(rag_instance)
-        
-        # Add the PDF with new chunking strategy
-        add_pdf(rag_instance, pdf_path)
-        
-        print("✅ Document reloaded with section metadata")
-    except Exception as e:
-        raise Exception(f"Error reloading document {pdf_path}: {str(e)}")
-
