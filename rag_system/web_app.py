@@ -4,7 +4,13 @@ import sys
 import time
 import psutil
 import gc
-from create_sample_pdf import create_sample_pdf
+
+# Add parent directory to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add scripts directory to path
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'scripts'))
+
+from scripts.create_sample_pdf import create_sample_pdf
 from rag_system.core import SimpleRAG
 # Check SQLite version for compatibility
 import sqlite3
@@ -16,12 +22,6 @@ if version < "3.35.0":
     print("⚠️ Using ChromaDB 0.3.29 for compatibility with older SQLite")
 else:
     print("✅ SQLite version is compatible with newer ChromaDB versions")
-
-
-# Add parent directory to path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-# Add scripts directory to path
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'scripts'))
 
 try:
     # Page config
@@ -81,6 +81,35 @@ if not os.path.exists(pdf_path):
 # Load RAG system
 rag = SimpleRAG()
 
+# Ensure PDF content is loaded into the vector database
+from rag_system.utils import add_pdf, reset_database
+
+# Check if we need to reset the database due to embedding dimension mismatch
+try:
+    # Test if the collection works with current embedding model
+    if rag.collection.count() > 0:
+        # Try a simple query to test compatibility
+        test_results = rag.collection.query(
+            query_texts=["test"],
+            n_results=1,
+            include=["documents"]
+        )
+except Exception as e:
+    if "Dimensionality" in str(e):
+        st.warning("🔄 Embedding dimension mismatch detected. Resetting database...")
+        reset_database(rag)
+        st.info("✅ Database reset complete")
+
+# Check if collection has documents, if not, add the PDF
+if rag.collection.count() == 0:
+    st.info("Loading PDF content into vector database...")
+    try:
+        add_pdf(rag, pdf_path)
+        st.success(f"✅ Loaded PDF content - {rag.collection.count()} chunks indexed")
+    except Exception as e:
+        st.error(f"❌ Error loading PDF: {e}")
+        st.stop()
+
 # PDF Content Dropdown
 with st.expander("View sample_IT_compliance_document.pdf contents", expanded=False):
     # Read PDF content dynamically
@@ -127,13 +156,30 @@ if st.button("🔍 Search", type="secondary") and query:
     # Performance tracking
     start_time = time.time()
     initial_memory = get_memory_usage()
-    
+
     with st.spinner("Searching..."):
+        # Debug info
+        st.write(f"🔍 Searching for: '{query}'")
+        st.write(f"📊 Collection has {rag.collection.count()} documents")
+
         # Measure embedding and search time
         search_start = time.time()
-        
-        # Call search with 5 results
-        results = rag.search(query, 5)
+
+        try:
+            # Call search with 5 results
+            results = rag.search(query, 5)
+            st.write(f"✅ Search completed - found {len(results)} results")
+        except Exception as e:
+            if "Dimensionality" in str(e):
+                st.error("❌ Embedding dimension mismatch. Please refresh the page to reset the database.")
+                if st.button("🔄 Reset Database"):
+                    reset_database(rag)
+                    add_pdf(rag, pdf_path)
+                    st.success("✅ Database reset and reloaded!")
+                    st.rerun()
+            else:
+                st.error(f"❌ Search failed: {e}")
+            st.stop()
         
         search_time = time.time() - search_start
         

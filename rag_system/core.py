@@ -7,11 +7,12 @@ import chromadb
 from transformers import pipeline,AutoTokenizer
 import re
 from .utils import read_pdf, reset_database, add_pdf
+import os
 
 class SimpleRAG:
     
     def __init__(self, embedding_model='sentence-transformers/paraphrase-multilingual-mpnet-base-v2',pipeline_model='deepset/roberta-base-squad2',device=-1):
-        try: 
+        try:
             self.embedding_model = embedding_model
             self.pipeline_model = pipeline_model
             # ChromaDB 0.3.29 uses different API to current version but this config is compatabile with deployed Streamlit
@@ -19,6 +20,9 @@ class SimpleRAG:
                 chroma_db_impl="duckdb+parquet",
                 persist_directory="./data/vector_db"
             ))
+
+            # For ChromaDB 0.3.29, use default embedding function for consistency
+            # The issue might be mixing different embedding functions
             self.collection = self.client.get_or_create_collection("documents")
             
             try:
@@ -56,7 +60,6 @@ class SimpleRAG:
         sentences = re.split(r'([.!?]+)', reconstructed_text)
         
         chunks = []
-        current_chunk = ""
         
         chunk = ""
         for i in range(0, len(sentences), 2):
