@@ -6,29 +6,9 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 
-def create_sample_pdf():
-    """Create a dummy PDF with IT compliance agreement content including LLM usage and timelines"""
-    
-    # Define filename
-    filename = "sample_IT_compliance_document.pdf"
-    
-    # Ensure directory exists
-    import os
-    os.makedirs("data/documents", exist_ok=True)
-    
-    # Create PDF
-    try:
-        c = canvas.Canvas(f"data/documents/{filename}", pagesize=letter)
-    except Exception as e:
-        print(f"Error creating PDF: {e}")
-        return
-    width, height = letter
-    
-    # Title
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(1*inch, 10*inch, "IT Compliance Agreement for using AI")
-    
-    content = [
+def get_content():
+    """Get the content array for the PDF"""
+    return [
         "1. Data Classification Policy",
         "1.1 Company data is classified into three levels: Public, Internal, and Confidential.",
         "1.2 Public data can be shared externally.",
@@ -60,6 +40,32 @@ def create_sample_pdf():
         "5.3 Annual training is required for all employees on security policies and procedures by December 31st each year.",
         "5.4 Compliance reports are due quarterly by the 15th of each quarter."
     ]
+
+def create_sample_pdf(filename = "sample_IT_compliance_document.pdf"):
+    """Create a dummy PDF with IT compliance agreement content including LLM usage and timelines"""
+    
+    directory ="data/documents"
+    # Ensure directory exists
+    import os
+    os.makedirs(directory, exist_ok=True)
+
+    # Delete existing PDF if it exists
+    if os.path.exists(directory + "/" + filename):
+        os.remove(directory + "/" + filename)
+
+    # Create PDF
+    try:
+        c = canvas.Canvas(f"{directory}/{filename}", pagesize=letter)
+    except Exception as e:
+        print(f"Error creating PDF: {e}")
+        return
+    
+    # Title
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(1*inch, 10*inch, "IT Compliance Agreement for using AI")
+
+    # Get content from the shared function
+    content = get_content()
     
     # Add content to PDF
     y_position = 9*inch
@@ -97,4 +103,4 @@ def create_sample_pdf():
     print(f"✅ Created {filename}")
 
 if __name__ == "__main__":
-    create_sample_pdf() 
+    create_sample_pdf()
