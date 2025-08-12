@@ -41,10 +41,14 @@ I used the Cursor agent on Auto model select to help build this project.
    pip install -r requirements.txt
    ```
 2. **Create sample pdf:**
-   ```
+   ```bash
    python scripts/create_sample_pdf.py
    ```
-2. **Run the demo app:**
+3. **Run unit tests (optional):**
+   ```bash
+   python -m unittest tests.test_create_sample_pdf -v
+   ```
+4. **Run the demo app:**
    ```bash
    streamlit run rag_system/web_app.py
    ```
@@ -59,13 +63,28 @@ rag-tutorial/
 │   └── web_app.py             # Streamlit web app
 ├── scripts/
 │   └── create_sample_pdf.py   # Script to generate sample PDF for testing
+├── tests/
+│   └── test_create_sample_pdf.py  # Unit tests for PDF creation
 ├── data/
 │   └── documents/             # Folder for PDF documents
 ├── requirements.txt           # Python dependencies
-└── README.md                  # This file
+├── README.md                  # This file
 └── ARCHITECTURE.md            # Project architecture
 ```
 
+## 🧪 Testing
+
+The project includes unit tests to verify that the PDF creation functionality works correctly:
+
+- **Test PDF creation**: Verifies that the PDF file is generated successfully
+- **Test content verification**: Ensures that expected content appears in the generated PDF
+- **Test multiple content items**: Validates that various sections are included
+- **Test page count**: Confirms the PDF has the expected number of pages
+
+Run all tests with:
+```bash
+python -m unittest tests.test_create_sample_pdf -v
+```
 
 ## 📚 Resources
 
