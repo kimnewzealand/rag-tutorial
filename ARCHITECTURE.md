@@ -102,8 +102,8 @@ After retrieval, the HuggingFace  "question-answering" pipeline pipeline takes t
 
 | Version                                 | Memory Usage | Storage   |
 |----------------------------------------|--------------|-----------|
-| 1 Embedding model all-MiniLM-L6-v2, word chunking and d n_result =3 ,Distance Metric: Cosine Similarity     | 507.7 MB     | 32.5 MB   |
-|2. Embedding model paraphrase-multilingual-mpnet-base-v2 sentence chunking and d n_result =10, pipeline model deepset/roberta-base-squad2 Distance Metric: Cosine Similarity (Current)  | 740.8 MB     | 112.7 MB  |
+| 1. Embedding model all-MiniLM-L6-v2, word chunking and n_results=3, Distance Metric: Cosine Similarity     | 507.7 MB     | 32.5 MB   |
+| 2. Embedding model paraphrase-multilingual-mpnet-base-v2, sentence chunking and n_results=5, pipeline model deepset/roberta-base-squad2, Distance Metric: Cosine Similarity (Current)  | ~850 MB     | ~786 MB* |
 
 ---
 
@@ -117,8 +117,10 @@ This has been iterated on as follows:
 
 - ✅ Updated embedding model in chromadb to improve semantic understanding
 - ✅ Changed from general word chunking to sentence chunking ([What is sentence chunking?](https://www.pinecone.io/learn/chunking-strategies/#sentence-chunking)) (Benefit: improves retrieval accuracy and ensures more relevant, contextually complete answers).
-- ✅ Increased n_results to default value 10 (initially set at 3) for better context quality (tradeoff: increases memory usage). See [ChromaDB n_results documentation](https://docs.trychroma.com/usage-guide#querying) for details.
+- ✅ Increased n_results to 5 (initially set at 3) for better context quality while maintaining reasonable performance (tradeoff: increases memory usage). See [ChromaDB n_results documentation](https://docs.trychroma.com/usage-guide#querying) for details.
 - ✅ Added a best answer selection using [transformers QA pipeline](https://huggingface.co/docs/transformers/main_classes/pipelines#transformers.QuestionAnsweringPipeline) to extract the most relevant answer from retrieved chunks, rather than just returning the top-matching chunk.
+- ✅ Fixed embedding dimension compatibility issues between ChromaDB storage and query operations for consistent search results.
+- ✅ Added automatic database reset functionality to handle embedding model changes and ensure system reliability.
 
 ---
 
