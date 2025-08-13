@@ -4,10 +4,8 @@ A basic RAG system using ChromaDB and sentence transformers
 """
 
 import chromadb
-from transformers import pipeline,AutoTokenizer
+from transformers import pipeline, AutoTokenizer
 import re
-from .utils import read_pdf, reset_database, add_pdf
-import os
 
 class SimpleRAG:
     
