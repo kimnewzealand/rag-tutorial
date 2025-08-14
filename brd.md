@@ -57,4 +57,17 @@ The system should be as cost effective from a model token cost perspective as po
 | Audit Preparation Time | ? hours | ? hours | 8 months |
 | Audit Pass Rate | n/a | 100% | 12 months |
 
+### Process Flow Diagram
+
+```mermaid
+flowchart LR
+    A[Policy Documents] --> B[Document Ingestion]
+    B --> C[Automated Extraction]
+    C --> D[Obligation Matrix Generation]
+    D --> E[Excel Export, Audit Trail, Source Citations, Traceability]
+    E --> F[Compliance Review]
+    F --> G[Audit Preparation]
+```
+
+
 ## Next Steps
